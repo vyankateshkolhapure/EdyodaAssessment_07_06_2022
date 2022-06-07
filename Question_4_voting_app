@@ -1,0 +1,102 @@
+**********************voting app*********
+NodePort assigned for Vote appn => http://54.179.194.248:31000
+NodePort assigned for Result appn => http://54.179.194.248:31001
+
+------------------------------observations before deleting any pod-------------------------------------
+> kubectl apply -f .
+[root@ip-172-31-24-99 k8s-specifications]# kubectl get all
+NAME                          READY   STATUS            RESTARTS   AGE
+pod/db-b54cd94f4-wkpfn        0/2     PodInitializing   0          6s
+pod/redis-868d64d78-wwqtj     0/2     Init:0/1          0          6s
+pod/result-5d57b59f4b-4tllw   0/2     Init:0/1          0          6s
+pod/vote-94849dc97-gwjhj      0/2     Init:0/1          0          6s
+pod/worker-dd46d7584-4jqsj    0/2     Init:0/1          0          6s
+
+> kubectl get po
+db-b54cd94f4-wkpfn        2/2     Running   0          4m47s
+redis-868d64d78-wwqtj     2/2     Running   0          4m47s
+result-5d57b59f4b-4tllw   2/2     Running   0          4m47s
+vote-94849dc97-gwjhj      2/2     Running   0          4m47s
+worker-dd46d7584-4jqsj    2/2     Running   0          4m47s
+
+> kubectl get svc
+NAME         TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+db           ClusterIP   10.100.199.105   <none>        5432/TCP         5m24s
+kubernetes   ClusterIP   10.96.0.1        <none>        443/TCP          8m54s
+redis        ClusterIP   10.104.48.184    <none>        6379/TCP         5m24s
+result       NodePort    10.108.251.220   <none>        5001:31001/TCP   5m24s
+vote         NodePort    10.96.137.208    <none>        5000:31000/TCP   5m24s
+
+> kubectl get deploy
+NAME     READY   UP-TO-DATE   AVAILABLE   AGE
+db       1/1     1            1           6m10s
+redis    1/1     1            1           6m10s
+result   1/1     1            1           6m10s
+vote     1/1     1            1           6m10s
+worker   1/1     1            1           6m10s
+
+> kubectl get rs
+NAME                DESIRED   CURRENT   READY   AGE
+db-b54cd94f4        1         1         1       8m4s
+redis-868d64d78     1         1         1       8m4s
+result-5d57b59f4b   1         1         1       8m4s
+vote-94849dc97      1         1         1       8m4s
+worker-dd46d7584    1         1         1       8m4s
+
+
+
+------------------------------------Observation while deleting pods------------------------------------
+
+1.deleting voting pod
+
+>  kubectl delete po vote-94849dc97-gwjhj
+
+db-b54cd94f4-wkpfn        2/2     Running       0          11m
+redis-868d64d78-wwqtj     2/2     Running       0          11m
+result-5d57b59f4b-4tllw   2/2     Running       0          11m
+vote-94849dc97-89f85      2/2     Running       0          10s
+vote-94849dc97-gwjhj      0/2     Terminating   0          11m
+worker-dd46d7584-4jqsj    2/2     Running       0          11m
+
+2.deleting worker pod
+
+>  kubectl delete pod worker-dd46d7584-4jqsj
+
+NAME                      READY   STATUS            RESTARTS   AGE
+db-b54cd94f4-wkpfn        2/2     Running           0          17m
+redis-868d64d78-wwqtj     2/2     Running           0          17m
+result-5d57b59f4b-4tllw   2/2     Running           0          17m
+vote-94849dc97-89f85      2/2     Running           0          6m8s
+worker-dd46d7584-4jqsj    2/2     Terminating       0          17m
+worker-dd46d7584-ckbmj    0/2     PodInitializing   0          5s
+
+3.deleting db pod
+
+>kubectl delete po db-b54cd94f4-wkpfn
+
+after db pod deleted, voting data stored in database is lost and vote counter in vote application is lost
+
+NAME                      READY   STATUS            RESTARTS   AGE
+db-b54cd94f4-jdltx        0/2     PodInitializing   0          5s
+db-b54cd94f4-wkpfn        2/2     Terminating       0          19m
+redis-868d64d78-wwqtj     2/2     Running           0          19m
+result-5d57b59f4b-4tllw   2/2     Running           0          19m
+vote-94849dc97-89f85      2/2     Running           0          7m54s
+worker-dd46d7584-ckbmj    2/2     Running           0          111s
+
+to make the application working again, I restarted the result appln and appln started working correctly
+
+[root@ip-172-31-24-99 k8s-specifications]# kubectl delete po result-5d57b59f4b-2fmn6
+pod "result-5d57b59f4b-2fmn6" deleted
+^C
+[root@ip-172-31-24-99 k8s-specifications]# kubectl get po
+NAME                      READY   STATUS            RESTARTS   AGE
+db-b54cd94f4-kn58x        2/2     Running           0          89s
+redis-868d64d78-wwqtj     2/2     Running           0          39m
+result-5d57b59f4b-2fmn6   2/2     Terminating       0          12m
+result-5d57b59f4b-7vjmk   0/2     PodInitializing   0          6s
+vote-94849dc97-89f85      2/2     Running           0          28m
+worker-dd46d7584-ckbmj    2/2     Running           2          22m
+
+
+
